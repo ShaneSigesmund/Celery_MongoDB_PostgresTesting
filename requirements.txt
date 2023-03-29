@@ -1,0 +1,10 @@
+pandas
+requests
+django
+celery
+requests
+redis
+pymongo[srv]
+djangorestframework
+psycopg2
+python-decouple
