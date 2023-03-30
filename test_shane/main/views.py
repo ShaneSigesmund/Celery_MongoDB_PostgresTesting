@@ -1,6 +1,8 @@
 import json
+from celery import shared_task
 from django.http import HttpResponse
 from django.shortcuts import render
+import requests
 
 # Create your views here.
 
@@ -8,22 +10,15 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework import status
 from rest_framework.response import Response
-from redis import Redis
 
-from main.tasks import call_api
-from main.tasks import get_database_mongo
-from main.tasks import get_database_postgres
-from main.tasks import readMongo
-from main.tasks import readPostgres
+from main.tasks import call_api, readMongo, readPostgres, getParallel
 
-from main.celery import add
+
+
 
 @api_view(['POST'])
 def count_endpoint(request):
-    print("hit count endpoint")
-
-    # Call get_database_mongo function
-    collection_name = get_database_mongo()["users"]
+    print("Entered in first endpoint!")
 
     count = request.data.get('count', None)
 
@@ -39,27 +34,15 @@ def count_endpoint(request):
     # If the value of count is 10 then you will be create 10 task and send it to queue for execution.
     if count >= 10:
         # Create empty list
+
+        print("Running 10+ Tasks............")
         user_list = []
-        user_list2 = []
 
         # Create at least 10 tasks with celery
-        result = call_api.delay(count)
-
-        result = result.ready()
-        print(result)
         for i in range(count):
-            result = call_api.delay(count)
-            result = result.get()
 
-            print(type(result))
+            user_list.append(call_api(count, getParallel.delay().get()))
 
-
-            if result.ready() == True:
-                result = result.get()
-
-                user_list.append(readMongo())
-
-                user_list2.append(readPostgres())
 
         return HttpResponse(user_list, status=status.HTTP_200_OK)
     # If count is less than 10
@@ -69,6 +52,8 @@ def count_endpoint(request):
         response_data = {'message': 'Count endpoint called {} times'.format(count)}
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
 
 
 # Make get request

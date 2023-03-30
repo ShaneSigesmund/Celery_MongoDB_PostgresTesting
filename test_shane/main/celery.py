@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+import requests
 
 # Set default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_shane.settings')
@@ -8,7 +9,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_shane.settings')
 app = Celery('tasks',backend='redis://127.0.0.1:6379', broker='redis://127.0.0.1:6379')
 
 
-# Use $ celery -A main.celery worker --loglevel=info to run
+# Use celery -A main.celery worker --loglevel=info to run
 
 
 # namespace='CELERY' means all celery-related configuration keys
@@ -25,7 +26,15 @@ app.conf.broker_transport_options = {'visibility_timeout': 60}
 app.autodiscover_tasks()
 
 
-@app.task
-def add(x, y):
-    return x + y
+
+
+
+
+@app.task(name="readData")
+def readData():
+
+    response = requests.get('https://fakestoreapi.com/users', 'Accept: application/json')
+    # item = response.json()
+
+    return [response, 5]
 

@@ -17,10 +17,9 @@ def get_database_mongo():
 
 
 collection_name = get_database_mongo()["users"]
-
 def get_database_postgres():
 
-    #establishing the connection
+    # Establishing the connection
     conn = psycopg2.connect(
     database="postgres", user='postgres', password='root2', host='localhost', port= '5432'
     )
@@ -31,7 +30,6 @@ def get_database_postgres():
 
 
     return cursor, conn
-
 
 def readPostgres():
     # Call get_database_mongo function
@@ -61,9 +59,9 @@ def readPostgres():
 
     return user_list
 
-
 def readMongo():
     # Call get_database_mongo function
+
     collection_name = get_database_mongo()["users"]
 
     # Create empty list
@@ -89,71 +87,84 @@ def readMongo():
 
     return user_list
 
+@shared_task(name="getParallel")
+def getParallel():
+    response = requests.get('https://fakestoreapi.com/users', 'Accept: application/json', timeout=(5.0, 30.0))
+
+    if response.status_code == 200:
+        item = response.json()
+    else:
+        item = None
+
+
+    return item
+
+
 @shared_task(name="call_api")
-def call_api(count):
+def call_api(count, item=None):
     userList = []
 
     try:
-        response = requests.get('https://fakestoreapi.com/users', 'Accept: application/json')
-        item = response.json()
-        
+        if item is None:
+            # Add response and create item for cases where count is less than 10
+            response = requests.get('https://fakestoreapi.com/users', 'Accept: application/json')
+            if response.status_code == 200:
+
+                item = response.json()
+
+
         cursor, conn = get_database_postgres()
 
         # Create users database if it doesn't exist
         cursor.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = 'users'")
         exists = cursor.fetchone()
 
+        # Edge case handling for database
         if not exists:
             cursor.execute('CREATE DATABASE users')
             print("Database created successfully........")
         else:
             print("Database already exists........")
 
-        # print all tables
-
+        # Create table if it doesn't exist
         cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
     except:
         print("Error occurred while connecting to postgres db")
 
+    # Add to databases
+    for i in range(count):
 
-    if response.status_code == 200:
-        for i in range(count):
+        # Store in mongodb and postgres db
+        try:
 
-            # Store in mongodb and postgres db
+            for i in item:
+                # Ignore duplicates when inserting into table
+                userList.append(i)
 
-            # Convert the response to a json object
-
-            try:
-
-                for i in item:
-
-                    # Ignore duplicates when inserting into table
-                    userList.append(i)
-
-                    # Write to postgres db
-                    cursor.execute("INSERT INTO main_user (id, address, username, password, firstname, lastname, phonenumber) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING;", (i['id'], Json(i['address']), i['username'], i['password'], i['name']['firstname'], i['name']['lastname'], i['phone']))
-
-                    conn.commit()
+                # Write to postgres db
+                cursor.execute("INSERT INTO main_user (id, address, username, password, firstname, lastname, phonenumber) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING;", (i['id'], Json(i['address']), i['username'], i['password'], i['name']['firstname'], i['name']['lastname'], i['phone']))
 
                 conn.commit()
-                cursor.close()
-            except (Exception, psycopg2.DatabaseError) as error:
-                print(error)
-            finally:
-                if conn is not None:
-                    conn.close()
+
+            conn.commit()
+            cursor.close()
+        except (Exception, psycopg2.DatabaseError) as error:
+            print(error)
+        finally:
+            if conn is not None:
+                conn.close()
 
 
 
-            # Store everything in collection_name
-            collection_name.insert_many(userList)
+        # Store everything in collection_name for mongodb
+        collection_name.insert_many(userList)
 
-            return item
-        else:
-            # handle error
-            print("Error occurred while calling the API")
-            # Return error
-            return response.status_code
+        return item
+    else:
+        # handle error
+        print("Error occurred while calling the API")
+        # Return error
+        return response.status_code
 
 
 
