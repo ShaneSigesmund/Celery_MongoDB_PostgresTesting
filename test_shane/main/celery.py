@@ -9,7 +9,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'test_shane.settings')
 app = Celery('tasks',backend='redis://127.0.0.1:6379', broker='redis://127.0.0.1:6379')
 
 
-# Use celery -A main.celery worker --loglevel=info to run
+# Use celery -A main.celery worker --loglevel=info --pool=eventlet to run
 
 
 # namespace='CELERY' means all celery-related configuration keys

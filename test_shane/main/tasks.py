@@ -108,6 +108,7 @@ def call_api(count, item=None):
         if item is None:
             # Add response and create item for cases where count is less than 10
             response = requests.get('https://fakestoreapi.com/users', 'Accept: application/json')
+
             if response.status_code == 200:
 
                 item = response.json()
