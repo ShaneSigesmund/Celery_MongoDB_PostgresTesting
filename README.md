@@ -1,4 +1,4 @@
-# Viral_Nation
+# Minor Readme :)
 
 NOTE: I kept in my debugging celery task (readData)
 so please ignore that when grading!
