@@ -1,7 +1,6 @@
 # Minor Readme :)
 
-NOTE: I kept in my debugging celery task (readData)
-so please ignore that when grading!
+NOTE: I kept in my debugging celery task (readData) so ignore it if you pull this project!
 
 As well,
 
